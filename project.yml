@@ -1,0 +1,72 @@
+name: PersonalTracker
+settings:
+  base:
+    DEVELOPMENT_TEAM: 38C88UTVUS
+    CODE_SIGN_STYLE: Automatic
+options:
+  bundleIdPrefix: personal
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  PersonalTracker:
+    type: application
+    platform: iOS
+    sources: [Tracker]
+    dependencies:
+      - target: TrackerWidgets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: personal.whooptracker
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+    info:
+      path: Tracker/Info.plist
+      properties:
+        CFBundleDisplayName: Pulse
+        NSBluetoothAlwaysUsageDescription: Connect to your WHOOP band to read your own tracking data.
+        NSMotionUsageDescription: Pulse counts your steps with your iPhone's motion sensors.
+        UIBackgroundModes: [bluetooth-central, fetch]
+        BGTaskSchedulerPermittedIdentifiers: [personal.whooptracker.refresh]
+        NSSupportsLiveActivities: true
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+  TrackerWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [TrackerWidgets, Tracker/Shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: personal.whooptracker.widgets
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+    info:
+      path: TrackerWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Pulse Workout
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  PulseUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Tests/UI]
+    dependencies:
+      - target: PersonalTracker
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: personal.whooptracker.uitests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  PersonalTracker:
+    build:
+      targets:
+        PersonalTracker: all
+    test:
+      targets: [PulseUITests]
