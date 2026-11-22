@@ -29,6 +29,7 @@
 		4615F6A2B9B7ACAB99AF5DA1 /* LiveHeartRate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBFF1075BB000FAD4C80832 /* LiveHeartRate.swift */; };
 		4675CCEBC7FB81A0AF49F5AB /* WorkoutsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31DB61ACDF92BC839420E80B /* WorkoutsHubView.swift */; };
 		486A9E49054212ABB3EC2C6D /* TrackerWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 55237A88B755401326B91C4B /* TrackerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4F37A6B00A6972750E60B035 /* DayHistoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C13C5A5F6CD6BE7057E647A /* DayHistoryViews.swift */; };
 		52B13992C4AA888197180842 /* CaloriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5AD1E828217D2FD125E127D /* CaloriesView.swift */; };
 		597D9ED1B90571878BA58111 /* TrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D61B18E85474549008B7B800 /* TrackerApp.swift */; };
 		5A18524BE75768BE1462955C /* ActivityDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00C1B5226A48481EAD9F678 /* ActivityDetector.swift */; };
@@ -97,6 +98,7 @@
 /* Begin PBXFileReference section */
 		083D5C76E674C395BE42A8BE /* HistoryProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryProtocol.swift; sourceTree = "<group>"; };
 		0BFF8B562E70F1F59A3040B1 /* PersonalTracker.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PersonalTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0C13C5A5F6CD6BE7057E647A /* DayHistoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayHistoryViews.swift; sourceTree = "<group>"; };
 		12658ECBADD8DBFCC117E2DA /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
 		16BF7CE02BC725113A6231DF /* SleepWork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepWork.swift; sourceTree = "<group>"; };
 		20E338C7B148A1781CFB9657 /* Calibration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Calibration.swift; sourceTree = "<group>"; };
@@ -161,6 +163,7 @@
 				B4E8B3D837850C234A7448D2 /* CalibrationView.swift */,
 				B5AD1E828217D2FD125E127D /* CaloriesView.swift */,
 				E54B83D20F23008356617CCE /* Components.swift */,
+				0C13C5A5F6CD6BE7057E647A /* DayHistoryViews.swift */,
 				7802B3458DAA44E17D850094 /* DeviceView.swift */,
 				EB8942AEB8E05AE27CC66CEE /* DisplayModels.swift */,
 				82A136ED39D04AF4502C21F3 /* DisplayStore.swift */,
@@ -428,6 +431,7 @@
 				341E00A9E86DF88071FCA385 /* CalorieEngine.swift in Sources */,
 				52B13992C4AA888197180842 /* CaloriesView.swift in Sources */,
 				ED0314D619BDF00E8561B37E /* Components.swift in Sources */,
+				4F37A6B00A6972750E60B035 /* DayHistoryViews.swift in Sources */,
 				E152772A41EC77C60ECA034A /* DemoData.swift in Sources */,
 				0A3AC25B24E4E5A99825AD23 /* DeviceView.swift in Sources */,
 				3F0F746007EC3DF46D57BB96 /* DisplayModels.swift in Sources */,

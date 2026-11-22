@@ -9,12 +9,7 @@ struct SleepView: View {
             VStack(spacing: 16) {
                 header
                 if let sleep = store.lastSleep {
-                    heroCard(sleep)
-                    stagesCard(sleep)
-                    needCard(sleep)
-                    detailTiles(sleep)
-                    vitals(sleep)
-                    overnight(sleep)
+                    SleepDetailSections(sleep: sleep)
                 } else {
                     emptyHero
                 }
@@ -64,6 +59,52 @@ struct SleepView: View {
                 symbol: "moon.stars", title: "No sleep recorded yet",
                 message: "Wear your band overnight. In the morning, open the app and sync to see how you slept: time asleep, stages and how close you got to what you needed.",
                 tint: Palette.sleep, actionTitle: "Sync your band") { router.tab = .device }
+        }
+    }
+
+    // MARK: Naps
+
+    @ViewBuilder private var napsCard: some View {
+        if !store.naps.isEmpty {
+            Card {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Naps today").sectionLabel(size: 12, tracking: 1.8)
+                    ForEach(store.naps) { nap in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("\(Format.time(nap.start)) – \(Format.time(nap.end))").font(Typo.body(15, weight: .semibold))
+                                Spacer()
+                                Text(Format.hoursMinutes(nap.asleep)).font(Typo.number(20))
+                            }
+                            if nap.needsReview {
+                                Text("Was this a nap? It counts toward tonight's sleep need once you confirm.").font(Typo.body(12)).foregroundStyle(Palette.muted)
+                                HStack(spacing: 10) {
+                                    Button("Yes, a nap") { store.decideNap?(nap.id, true) }.buttonStyle(PillButtonStyle())
+                                    Button("No") { store.decideNap?(nap.id, false) }.foregroundStyle(Palette.muted)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Every sleep card for one night. Shared by the Sleep tab and the day history.
+struct SleepDetailSections: View {
+    let sleep: DisplaySleep
+    var historical = false
+    @EnvironmentObject private var store: DisplayStore
+
+    var body: some View {
+        VStack(spacing: 16) {
+            heroCard(sleep)
+            stagesCard(sleep)
+            needCard(sleep)
+            detailTiles(sleep)
+            vitals(sleep)
+            overnight(sleep)
         }
     }
 
@@ -165,7 +206,7 @@ struct SleepView: View {
         Card {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("Tonight's sleep need").sectionLabel(size: 12, tracking: 1.8)
+                    Text(historical ? "Sleep need" : "Tonight's sleep need").sectionLabel(size: 12, tracking: 1.8)
                     Spacer()
                     Text(Format.hoursColonMinutes(sleep.need)).font(Typo.number(22)).foregroundStyle(Palette.sleep)
                 }
@@ -247,34 +288,6 @@ struct SleepView: View {
             Text(value).font(Typo.body(14)).foregroundStyle(value.hasPrefix("Not") || value == "Calibrating" ? Palette.muted : Palette.text)
         }
         .accessibilityElement(children: .combine)
-    }
-
-    // MARK: Naps
-
-    @ViewBuilder private var napsCard: some View {
-        if !store.naps.isEmpty {
-            Card {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Naps today").sectionLabel(size: 12, tracking: 1.8)
-                    ForEach(store.naps) { nap in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("\(Format.time(nap.start)) – \(Format.time(nap.end))").font(Typo.body(15, weight: .semibold))
-                                Spacer()
-                                Text(Format.hoursMinutes(nap.asleep)).font(Typo.number(20))
-                            }
-                            if nap.needsReview {
-                                Text("Was this a nap? It counts toward tonight's sleep need once you confirm.").font(Typo.body(12)).foregroundStyle(Palette.muted)
-                                HStack(spacing: 10) {
-                                    Button("Yes, a nap") { store.decideNap?(nap.id, true) }.buttonStyle(PillButtonStyle())
-                                    Button("No") { store.decideNap?(nap.id, false) }.foregroundStyle(Palette.muted)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // MARK: Vitals

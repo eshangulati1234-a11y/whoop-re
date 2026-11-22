@@ -351,6 +351,36 @@ final class HistoryStore {
         guard code == SQLITE_DONE else { throw Failure.database("History query failed") }
         return result
     }
+    /// Local-day numbers (days since 1970, shifted by `tzOffset` seconds) that have any stored heart-rate data in `[from, to)`.
+    func daysWithData(from: Date, to: Date, tzOffset: Int) throws -> Set<Int> {
+        let lo = from.timeIntervalSince1970, hi = to.timeIntervalSince1970
+        guard lo.isFinite, hi.isFinite else { throw Failure.database("Invalid date range") }
+        var days = Set<Int>()
+        for sql in [
+            "SELECT DISTINCT CAST((minute*60+?)/86400 AS INTEGER) FROM history_minutes WHERE minute>=? AND minute<?",
+            "SELECT DISTINCT CAST((minute*60+?)/86400 AS INTEGER) FROM live_minutes WHERE minute>=? AND minute<?",
+        ] {
+            let statement = try prepare(sql); defer { sqlite3_finalize(statement) }
+            sqlite3_bind_int64(statement, 1, Int64(tzOffset)); sqlite3_bind_int64(statement, 2, Int64(lo / 60)); sqlite3_bind_int64(statement, 3, Int64(hi / 60))
+            while sqlite3_step(statement) == SQLITE_ROW { days.insert(Int(sqlite3_column_int64(statement, 0))) }
+        }
+        let statement = try prepare("SELECT DISTINCT CAST((time+?)/86400 AS INTEGER) FROM samples WHERE time>=? AND time<?")
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_int64(statement, 1, Int64(tzOffset)); sqlite3_bind_double(statement, 2, lo); sqlite3_bind_double(statement, 3, hi)
+        while sqlite3_step(statement) == SQLITE_ROW { days.insert(Int(sqlite3_column_int64(statement, 0))) }
+        return days
+    }
+    /// Oldest stored heart-rate data of any kind.
+    func earliestSampleDate() throws -> Date? {
+        var oldest: Double?
+        for sql in ["SELECT MIN(minute)*60.0 FROM history_minutes", "SELECT MIN(minute)*60.0 FROM live_minutes", "SELECT MIN(time) FROM samples"] {
+            let statement = try prepare(sql); defer { sqlite3_finalize(statement) }
+            if sqlite3_step(statement) == SQLITE_ROW, sqlite3_column_type(statement, 0) != SQLITE_NULL {
+                let value = sqlite3_column_double(statement, 0); oldest = min(oldest ?? value, value)
+            }
+        }
+        return oldest.map { Date(timeIntervalSince1970: $0) }
+    }
     /// Time of the newest decoded history sample.
     func latestSampleDate() throws -> Date? {
         let statement = try prepare("SELECT MAX(time) FROM samples")

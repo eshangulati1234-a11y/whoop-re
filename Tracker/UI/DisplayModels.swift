@@ -261,4 +261,5 @@ struct DisplayDaySummary {
     var sleepPerformance: Double?
     var hasHeartRate: Bool
     var workouts: [Workout]
+    var sleep: DisplaySleep?
 }

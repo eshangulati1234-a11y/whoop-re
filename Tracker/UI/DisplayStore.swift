@@ -29,6 +29,9 @@ import CoreBluetooth
     var confirmDetection: ((DisplayDetection, String) -> Void)?
     var dismissDetection: ((DisplayDetection) -> Void)?
     var loadDay: ((Date) -> DisplayDaySummary)?
+    /// Start-of-day dates in `[from, to)` that have recorded data, plus the earliest day with data.
+    var daysWithData: ((Date, Date) -> Set<Date>)?
+    var earliestDay: (() -> Date?)?
 
     private(set) weak var band: BandManager?
     private var bandLink: AnyCancellable?

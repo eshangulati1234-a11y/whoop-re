@@ -68,6 +68,8 @@ import Combine
             if active { self?.recomputeAll(); self?.scheduleMidnight() } else { self?.flushLive() }
         }
         display.confirmDetection = { [weak self] detection, type in self?.confirm(detectionID: detection.id, type: type) }
+        display.daysWithData = { [weak self] from, to in self?.daysWithData(from, to) ?? [] }
+        display.earliestDay = { [weak self] in self?.earliestDay() }
         display.loadDay = { [weak self] date in self?.daySummary(date) ?? DisplayDaySummary(date: date, hasHeartRate: false, workouts: []) }
         display.dismissDetection = { [weak self] detection in self?.dismiss(detectionID: detection.id) }
         NotificationService.shared.onAction = { [weak self] id, confirmed in
@@ -300,6 +302,25 @@ import Combine
         display.workoutMetrics = all
     }
 
+    /// Days in `[from, to)` with any recorded heart rate or workout.
+    func daysWithData(_ from: Date, _ to: Date) -> Set<Date> {
+        let start = calendar.startOfDay(for: from)
+        let offset = calendar.timeZone.secondsFromGMT(for: start)
+        var days = Set<Date>()
+        for number in (try? storage?.daysWithData(from: start, to: to, tzOffset: offset)) ?? [] {
+            days.insert(calendar.startOfDay(for: Date(timeIntervalSince1970: Double(number) * 86400 - Double(offset) + 43200)))
+        }
+        for workout in band?.workouts ?? [] where workout.start >= start && workout.start < to { days.insert(calendar.startOfDay(for: workout.start)) }
+        return days
+    }
+
+    /// Oldest day that has any data, for limiting how far back the pickers scroll.
+    func earliestDay() -> Date? {
+        var oldest = band?.workouts.map(\.start).min()
+        if let first = try? storage?.earliestSampleDate() { oldest = min(oldest ?? first, first) }
+        return oldest.map { calendar.startOfDay(for: $0) }
+    }
+
     /// Strain, calories, sleep and workouts for one earlier day, from stored history and today's zones.
     func daySummary(_ date: Date) -> DisplayDaySummary {
         let start = calendar.startOfDay(for: date)
@@ -311,6 +332,11 @@ import Combine
         summary.hasHeartRate = series.contains { $0 != nil }
         let sleep = ((try? storage?.sleeps(fromDay: dayNumber(start), toDay: dayNumber(start))) ?? []).first?.session
         summary.asleep = sleep?.asleep; summary.sleepPerformance = sleep?.performance
+        summary.sleep = sleep.map(Self.display)
+        for workout in summary.workouts where workout.end != nil {
+            let result = cachedMetrics(workout).0
+            display?.workoutMetrics[workout.id] = DisplayWorkoutMetrics(calories: result.calories, strain: result.strain)
+        }
         if let profile, summary.hasHeartRate {
             let zones = CalibrationEngine.zones(profile: profile, baseline: personalization.baseline)
             summary.strain = CalibrationEngine.score(series, zones: zones)

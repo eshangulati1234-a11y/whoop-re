@@ -393,10 +393,7 @@ struct WorkoutSummaryView: View {
                     VStack(spacing: 16) {
                         SheetTopBar(title: "Workout", onClose: { router.presented = nil },
                                     trailing: AnyView(Button("Edit") { editing = true }.font(Typo.body(15, weight: .semibold)).frame(minWidth: 44, minHeight: 44)))
-                        titleRow(workout)
-                        heroCard(workout)
-                        chartCard(workout)
-                        zonesCard(workout)
+                        WorkoutDetailSections(workout: workout)
                         Button("Done") { router.presented = nil }
                             .buttonStyle(PillButtonStyle())
                             .padding(.top, 4)
@@ -418,6 +415,21 @@ struct WorkoutSummaryView: View {
                                actionTitle: "Close") { router.presented = nil }
                     .padding(20)
             }
+        }
+    }
+}
+
+/// Header, stats, heart-rate trace and zones for one saved workout. Shared by the summary and the day history.
+struct WorkoutDetailSections: View {
+    let workout: Workout
+    @EnvironmentObject private var store: DisplayStore
+
+    var body: some View {
+        VStack(spacing: 16) {
+            titleRow(workout)
+            heroCard(workout)
+            chartCard(workout)
+            zonesCard(workout)
         }
     }
 

@@ -6,6 +6,8 @@ struct HomeView: View {
     @EnvironmentObject private var router: Router
     @State private var editingActivities = false
     @State private var pickedDay: DayPick?
+    @State private var showCalendar = false
+    @StateObject private var history = DayHistory()
 
     private var todaysWorkouts: [Workout] {
         let calendar = Calendar.current
@@ -17,7 +19,7 @@ struct HomeView: View {
             VStack(spacing: 20) {
                 header
                 bandConnectionStatus
-                weekStrip
+                WeekPager(history: history, onPick: { pickedDay = DayPick(date: $0) }, onCalendar: { showCalendar = true })
                 ringsCard
                 calibrationSection
                 HStack(spacing: 12) {
@@ -35,6 +37,11 @@ struct HomeView: View {
         }
         .screenBackground()
         
+        .task { history.refresh(store) }
+        .onChange(of: band.syncing) { _, _ in history.refresh(store) }
+        .sheet(isPresented: $showCalendar) {
+            CalendarSheet(history: history) { day in showCalendar = false; DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { pickedDay = DayPick(date: day) } }
+        }
         .sheet(item: $pickedDay) { pick in
             DayDetailSheet(date: pick.date)
                 .environmentObject(store).environmentObject(band).environmentObject(router)
@@ -103,35 +110,6 @@ struct HomeView: View {
             }
             .buttonStyle(CardPressStyle())
             .accessibilityLabel("Band battery \(Int(percent.rounded())) percent" + (charging ? ", charging" : ""))
-        }
-    }
-
-    // MARK: Week strip
-
-    private var weekStrip: some View {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let weekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
-        let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) }
-        return HStack {
-            ForEach(days, id: \.self) { day in
-                let isToday = calendar.isDate(day, inSameDayAs: today)
-                let isFuture = day > today
-                Button { if !isToday && !isFuture { Haptics.select(); pickedDay = DayPick(date: day) } } label: {
-                VStack(spacing: 4) {
-                    Text(day.formatted(.dateTime.weekday(.narrow))).font(Typo.label(12))
-                    Text(day.formatted(.dateTime.day())).font(Typo.number(20))
-                }
-                .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(isToday ? Palette.background : (isFuture ? Palette.muted : Palette.text))
-                .frame(width: 44, height: 62)
-                .background(isToday ? Palette.text : .clear, in: Capsule())
-                .frame(maxWidth: .infinity)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(day.formatted(.dateTime.weekday(.wide).day()) + (isToday ? ", today" : ""))
-            }
         }
     }
 
@@ -384,7 +362,7 @@ struct DayPick: Identifiable { let date: Date; var id: Date { date } }
 
 /// One earlier day: strain, calories, sleep and workouts.
 struct DayDetailSheet: View {
-    let date: Date
+    @State var date: Date
     @EnvironmentObject private var store: DisplayStore
     @Environment(\.dismiss) private var dismiss
     @State private var summary: DisplayDaySummary?
@@ -396,12 +374,15 @@ struct DayDetailSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text(date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())).font(Typo.number(30))
+                        Button { move(-1) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }.accessibilityLabel("Previous day")
+                        Text(date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())).font(Typo.number(26)).lineLimit(1).minimumScaleFactor(0.7)
+                        Button { move(1) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }
+                            .disabled(!canMoveForward).accessibilityLabel("Next day")
                         Spacer()
                         Button("Done") { dismiss() }.font(Typo.body(15, weight: .semibold)).frame(minWidth: 44, minHeight: 44)
                     }
                     if let summary {
-                        if !summary.hasHeartRate && summary.asleep == nil && summary.workouts.isEmpty {
+                        if !summary.hasHeartRate && summary.asleep == nil && summary.sleep == nil && summary.workouts.isEmpty {
                             EmptyStateCard(symbol: "calendar", title: "No data for this day", message: "Your band didn't record anything, or it hasn't synced that day yet.")
                         } else {
                             Card {
@@ -414,14 +395,20 @@ struct DayDetailSheet: View {
                             if let steps {
                                 Text("\(steps.formatted()) steps").font(Typo.body(13)).foregroundStyle(Palette.muted)
                             }
-                            if let performance = summary.sleepPerformance {
+                            if let sleep = summary.sleep {
+                                Text("Sleep").sectionLabel(size: 12, tracking: 1.8).padding(.top, 8)
+                                SleepDetailSections(sleep: sleep, historical: true)
+                            } else if let performance = summary.sleepPerformance {
                                 Text("Sleep performance \(Int((performance * 100).rounded()))%").font(Typo.body(13)).foregroundStyle(Palette.muted)
                             }
-                            Text("Workouts").sectionLabel(size: 12, tracking: 1.8)
+                            Text("Workouts").sectionLabel(size: 12, tracking: 1.8).padding(.top, 8)
                             if summary.workouts.isEmpty {
                                 Text("No workouts this day.").font(Typo.body(13)).foregroundStyle(Palette.muted)
                             }
-                            ForEach(summary.workouts) { WorkoutListRow(workout: $0) }
+                            ForEach(summary.workouts) { workout in
+                                WorkoutDetailSections(workout: workout)
+                                if workout.id != summary.workouts.last?.id { Hairline().padding(.vertical, 4) }
+                            }
                         }
                     } else { ProgressView().tint(Palette.text).frame(maxWidth: .infinity).padding(.top, 40) }
                 }
@@ -429,12 +416,27 @@ struct DayDetailSheet: View {
             }
         }
         
-        .task { summary = store.loadDay?(date); steps = await store.steps.steps(on: date) }
+        .task(id: date) { summary = nil; steps = nil; summary = store.loadDay?(date); steps = await store.steps.steps(on: date) }
+        .gesture(DragGesture(minimumDistance: 40).onEnded { value in
+            if value.translation.width > 80 { move(-1) } else if value.translation.width < -80, canMoveForward { move(1) }
+        })
+    }
+
+    private var canMoveForward: Bool {
+        let cal = Calendar.current
+        guard let next = cal.date(byAdding: .day, value: 1, to: date) else { return false }
+        return next < cal.startOfDay(for: Date())
+    }
+
+    private func move(_ delta: Int) {
+        guard let next = Calendar.current.date(byAdding: .day, value: delta, to: date) else { return }
+        if delta > 0 && !canMoveForward { return }
+        Haptics.select(); date = next
     }
 
     private func stat(_ title: String, _ value: String, _ color: Color) -> some View {
         VStack(spacing: 6) {
-            Text(value).font(Typo.number(30)).foregroundStyle(color)
+            Text(value).font(Typo.number(30)).foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.6)
             Text(title).sectionLabel(size: 11, tracking: 1.4)
         }
         .frame(maxWidth: .infinity)
